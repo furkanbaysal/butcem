@@ -121,7 +121,7 @@
 
     <!-- Alt Navigasyon (Mobil) -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 safe-area-bottom z-20">
-        <div class="max-w-md mx-auto flex justify-around items-center p-3">
+        <div class="max-w-md mx-auto grid grid-cols-4 items-center p-3">
             <button class="flex flex-col items-center text-emerald-500" onclick="window.scrollTo({top:0, behavior:'smooth'})">
                 <i class="fa-solid fa-house text-lg mb-1"></i>
                 <span class="text-[10px] font-medium">Ana Sayfa</span>
@@ -133,6 +133,10 @@
             <button class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="openModal('expense')">
                 <i class="fa-solid fa-minus-circle text-lg mb-1"></i>
                 <span class="text-[10px] font-medium">Gider</span>
+            </button>
+            <button class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="openYearModal()">
+                <i class="fa-solid fa-calendar-plus text-lg mb-1"></i>
+                <span class="text-[10px] font-medium">Yıl / Ay</span>
             </button>
         </div>
     </nav>
@@ -163,6 +167,48 @@
                     Kaydet
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Yıl / Ay Yönetim Penceresi -->
+    <div id="yearModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center fade-in">
+        <div class="bg-white dark:bg-slate-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 sm:pb-6 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0" id="yearModalContent">
+
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Yıl ve Ay Yönetimi</h3>
+                <button onclick="closeYearModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Yıla Git -->
+            <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4">
+                <p class="text-sm font-semibold mb-3 flex items-center gap-2 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-arrow-right-to-bracket text-emerald-500"></i> Yıla Git</p>
+                <div class="flex gap-2">
+                    <select id="jumpYearSelect" class="flex-1 p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"></select>
+                    <button onclick="jumpToYear()" class="px-5 bg-slate-900 dark:bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-emerald-700 transition active:scale-95">Git</button>
+                </div>
+            </div>
+
+            <!-- Yeni Yıl/Ay Ekle -->
+            <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+                <p class="text-sm font-semibold mb-3 flex items-center gap-2 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-calendar-plus text-blue-500"></i> Yeni Yıl / Ay Ekle</p>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium mb-1 text-slate-500 dark:text-slate-400">Yıl</label>
+                        <input type="number" id="newYearInput" placeholder="2031" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1 text-slate-500 dark:text-slate-400">Ay</label>
+                        <select id="newMonthSelect" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"></select>
+                    </div>
+                </div>
+                <button onclick="addCustomMonth()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition active:scale-95">
+                    <i class="fa-solid fa-plus mr-1"></i> Dönem Ekle
+                </button>
+                <p class="text-[11px] text-slate-400 mt-2">Var olan dönemi eklerseniz o aya yönlendirilirsiniz; mevcut verileriniz hiçbir zaman silinmez.</p>
+            </div>
+
         </div>
     </div>
 
@@ -460,6 +506,85 @@
                 financeData[currentMonthIndex].expenses.splice(index, 1);
                 saveData();
             }
+        }
+
+        // --- YIL / AY YÖNETİMİ ---
+
+        // Modalı açarken yıl listesini ve ay seçeneklerini doldur
+        function openYearModal() {
+            const modal = document.getElementById('yearModal');
+            const content = document.getElementById('yearModalContent');
+            modal.classList.replace('hidden', 'flex');
+            setTimeout(() => content.classList.remove('translate-y-full'), 10);
+
+            // Mevcut yılları benzersiz olarak listele
+            const years = [...new Set(financeData.map(d => d.year))].sort((a, b) => a - b);
+            const jumpSelect = document.getElementById('jumpYearSelect');
+            jumpSelect.innerHTML = '';
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.innerText = y + ' yılına git';
+                jumpSelect.appendChild(opt);
+            });
+
+            // Ay seçeneklerini doldur
+            const monthSelect = document.getElementById('newMonthSelect');
+            monthSelect.innerHTML = '';
+            monthNames.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.innerText = m;
+                monthSelect.appendChild(opt);
+            });
+
+            // Yıl alanını, mevcut en büyük yıldan bir sonrasıyla öner
+            const maxYear = Math.max(...years);
+            const yearInput = document.getElementById('newYearInput');
+            if (!yearInput.value) yearInput.placeholder = (maxYear + 1).toString();
+        }
+
+        function closeYearModal() {
+            const modal = document.getElementById('yearModal');
+            const content = document.getElementById('yearModalContent');
+            content.classList.add('translate-y-full');
+            setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+        }
+
+        // Seçilen yılın ilk ayına git
+        function jumpToYear() {
+            const y = parseInt(document.getElementById('jumpYearSelect').value);
+            const idx = financeData.findIndex(d => d.year === y);
+            if (idx !== -1) {
+                currentMonthIndex = idx;
+                saveData();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            closeYearModal();
+        }
+
+        // Kullanıcının girdiği yıl + ayı ekle (varsa o aya git; veri silinmez)
+        function addCustomMonth() {
+            const y = parseInt(document.getElementById('newYearInput').value);
+            const m = document.getElementById('newMonthSelect').value;
+
+            if (isNaN(y) || y < 2000 || y > 2100) {
+                alert("Lütfen geçerli bir yıl girin (2000 - 2100 arası).");
+                return;
+            }
+
+            let idx = financeData.findIndex(d => d.year === y && d.month === m);
+            if (idx === -1) {
+                // Yeni dönem: boş (0 TL) başlar, mevcut verilere dokunulmaz
+                financeData.push({ month: m, year: y, income: 0, expenses: [] });
+                financeData.sort((a, b) => a.year - b.year || monthNames.indexOf(a.month) - monthNames.indexOf(b.month));
+                idx = financeData.findIndex(d => d.year === y && d.month === m);
+            }
+
+            currentMonthIndex = idx;
+            saveData();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            closeYearModal();
         }
 
         // --- TEMA AYARLARI ---
