@@ -26,6 +26,8 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
@@ -47,7 +49,7 @@
     <main class="max-w-md mx-auto p-4 pb-24">
         
         <!-- Ay Seçici -->
-        <div class="flex gap-2 overflow-x-auto pb-4 mb-2 hide-scrollbar" id="monthTabs" style="scrollbar-width: none;">
+        <div class="flex gap-2 overflow-x-auto pb-4 mb-2 hide-scrollbar" id="monthTabs">
             <!-- Aylar JS ile eklenecek -->
         </div>
 
@@ -166,7 +168,7 @@
     <script>
         // --- VERİ YÖNETİMİ ---
         
-        // Excel'den alınan başlangıç verileri
+        // Excel'den alınan başlangıç verileri + 2027 uzatması
         const defaultData = [
             { month: "Ağustos", year: 2025, income: 180000, expenses: [
                 { name: "Denizbank", amount: 8300 }, { name: "Akbank", amount: 5000 }, { name: "TEB", amount: 7600 },
@@ -234,18 +236,37 @@
                 { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
                 { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
                 { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+            ]},
+            // 2027 AYLARI EKLENDİ
+            { month: "Ocak", year: 2027, income: 200000, expenses: [
+                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
+                { name: "QNB", amount: 10000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
+            ]},
+            { month: "Şubat", year: 2027, income: 200000, expenses: [
+                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
+                { name: "QNB", amount: 10000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
             ]}
         ];
 
         // LocalStorage'dan veriyi al veya varsayılanı kullan
         let financeData = JSON.parse(localStorage.getItem('financeData')) || defaultData;
-        let currentMonthIndex = 0;
-        let editingIndex = null; // Düzenlenen giderin indexi (null ise yeni ekleme)
+        
+        // SON AÇILAN AYI HATIRLAMA
+        let currentMonthIndex = parseInt(localStorage.getItem('lastViewedMonth')) || 0;
+        
+        // Eğer kayıtlı index veri uzunluğundan büyükse (eski kayıt), sıfırla
+        if (currentMonthIndex >= financeData.length) {
+            currentMonthIndex = 0;
+        }
+        
+        let editingIndex = null;
 
         // --- FONKSİYONLAR ---
 
         function saveData() {
             localStorage.setItem('financeData', JSON.stringify(financeData));
+            // Son bakılan ayı kaydet
+            localStorage.setItem('lastViewedMonth', currentMonthIndex);
             renderApp();
         }
 
@@ -286,7 +307,10 @@
                 const btn = document.createElement('button');
                 btn.className = `px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${isActive ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-md' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`;
                 btn.innerText = data.month;
-                btn.onclick = () => { currentMonthIndex = index; renderApp(); };
+                btn.onclick = () => { 
+                    currentMonthIndex = index; 
+                    saveData(); // Ay değişimini kaydet
+                };
                 tabsContainer.appendChild(btn);
             });
 
@@ -329,7 +353,7 @@
         }
 
         // --- MODAL İŞLEMLERİ ---
-        let modalMode = 'expense'; // 'income' veya 'expense'
+        let modalMode = 'expense';
 
         function openModal(mode, index = null) {
             modalMode = mode;
@@ -346,7 +370,7 @@
 
             if (mode === 'income') {
                 title.innerText = "Geliri Güncelle";
-                nameGroup.style.display = 'none'; // Gelirde sadece tutar girilir
+                nameGroup.style.display = 'none';
                 amountInput.value = financeData[currentMonthIndex].income;
             } else {
                 nameGroup.style.display = 'block';
@@ -423,7 +447,7 @@
             document.getElementById('darkModeIcon').className = "fa-solid fa-sun text-orange-400";
         }
 
-        // Uygulamayı Başlat
+        // Uygulamayı Başlat (Son bakılan ayda açılacak)
         renderApp();
     </script>
 </body>
