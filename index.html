@@ -29,7 +29,7 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-<base target="_blank">
+    <base target="_blank">
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
 
@@ -367,33 +367,31 @@
             }
             bar.style.width = `${percent}%`;
 
-            // Ay Sekmelerini Oluştur (yıl başlıkları altında gruplu)
+            // ** Değişiklik Yapılan Kısım ** Ay Sekmelerini Güncelle
             const tabsContainer = document.getElementById('monthTabs');
             tabsContainer.innerHTML = '';
-            let currentRow = null;
-            let lastYear = null;
-            financeData.forEach((data, index) => {
-                // Yıl değişince yeni satır + yıl başlığı ekle
-                if (data.year !== lastYear) {
-                    lastYear = data.year;
-                    currentRow = document.createElement('div');
-                    currentRow.className = 'flex items-center gap-2 overflow-x-auto hide-scrollbar';
-                    tabsContainer.appendChild(currentRow);
+            const currentRow = document.createElement('div');
+            currentRow.className = 'flex items-center gap-2 overflow-x-auto hide-scrollbar';
+            tabsContainer.appendChild(currentRow);
+            
+            const yearLabel = document.createElement('div');
+            yearLabel.className = 'shrink-0 sticky left-0 z-10 px-3 py-2 rounded-full text-sm font-bold bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200 shadow-sm';
+            yearLabel.innerText = currentData.year; // Sadece mevcut yıl görünür
+            currentRow.appendChild(yearLabel);
 
-                    const yearLabel = document.createElement('div');
-                    yearLabel.className = 'shrink-0 sticky left-0 z-10 px-3 py-2 rounded-full text-sm font-bold bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200 shadow-sm';
-                    yearLabel.innerText = data.year;
-                    currentRow.appendChild(yearLabel);
+            // Sadece mevcut yılın aylarını ekleyin
+            financeData.forEach((data, index) => {
+                if (data.year === currentData.year) { // Yıl kontrolü
+                    const isActive = index === currentMonthIndex;
+                    const btn = document.createElement('button');
+                    btn.className = `shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${isActive ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-md' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`;
+                    btn.innerText = data.month;
+                    btn.onclick = () => { 
+                        currentMonthIndex = index; 
+                        saveData(); // Ay değişimini kaydet
+                    };
+                    currentRow.appendChild(btn);
                 }
-                const isActive = index === currentMonthIndex;
-                const btn = document.createElement('button');
-                btn.className = `shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${isActive ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-md' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`;
-                btn.innerText = data.month;
-                btn.onclick = () => { 
-                    currentMonthIndex = index; 
-                    saveData(); // Ay değişimini kaydet
-                };
-                currentRow.appendChild(btn);
             });
 
             // Gider Listesini Oluştur
