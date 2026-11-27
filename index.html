@@ -59,7 +59,7 @@
             <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-10 -mt-10"></div>
             <div class="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full -ml-10 -mb-10"></div>
             
-            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1" id="currentMonthTitle">Ağustos 2025</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1" id="currentMonthTitle">Ağustos 2026</p>
             
             <div class="mb-4">
                 <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Kalan Nakit Para</p>
@@ -95,18 +95,6 @@
             </div>
         </div>
 
-        <!-- İşlem Butonları -->
-        <div class="grid grid-cols-2 gap-3 mb-6">
-            <button onclick="openModal('income')" class="bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-2xl shadow-lg shadow-emerald-500/30 flex flex-col items-center gap-2 transition active:scale-95">
-                <i class="fa-solid fa-plus text-xl"></i>
-                <span class="font-semibold text-sm">Gelir Ekle/Güncelle</span>
-            </button>
-            <button onclick="openModal('expense')" class="bg-rose-500 hover:bg-rose-600 text-white p-4 rounded-2xl shadow-lg shadow-rose-500/30 flex flex-col items-center gap-2 transition active:scale-95">
-                <i class="fa-solid fa-minus text-xl"></i>
-                <span class="font-semibold text-sm">Yeni Gider Ekle</span>
-            </button>
-        </div>
-
         <!-- Gider Listesi -->
         <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg">Gider Detayları</h3>
@@ -126,17 +114,9 @@
                 <i class="fa-solid fa-house text-lg mb-1"></i>
                 <span class="text-[10px] font-medium">Ana Sayfa</span>
             </button>
-            <button class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="openModal('income')">
-                <i class="fa-solid fa-plus-circle text-lg mb-1"></i>
-                <span class="text-[10px] font-medium">Gelir</span>
-            </button>
-            <button class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="openModal('expense')">
-                <i class="fa-solid fa-minus-circle text-lg mb-1"></i>
-                <span class="text-[10px] font-medium">Gider</span>
-            </button>
             <button class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="openYearModal()">
                 <i class="fa-solid fa-calendar-plus text-lg mb-1"></i>
-                <span class="text-[10px] font-medium">Yıl / Ay</span>
+                <span class="text-[10px] font-medium">Yıl/Ay</span>
             </button>
         </div>
     </nav>
@@ -217,74 +197,36 @@
         
         // Excel'den alınan başlangıç verileri + 2027 uzatması
         const defaultData = [
-            { month: "Ağustos", year: 2025, income: 180000, expenses: [
+            { month: "Ağustos", year: 2026, income: 180000, expenses: [
                 { name: "Denizbank", amount: 8300 }, { name: "Akbank", amount: 5000 }, { name: "TEB", amount: 7600 },
                 { name: "Halkbank", amount: 4000 }, { name: "İş Bankası", amount: 20000 }, { name: "İş Bankası Kredi", amount: 29000 },
                 { name: "QNB", amount: 20000 }, { name: "Denizbank Ek Hesap", amount: 3000 }, { name: "Kira", amount: 23000 },
                 { name: "Araba + Fatura", amount: 20000 }
             ]},
-            { month: "Eylül", year: 2025, income: 176000, expenses: [
+            { month: "Eylül", year: 2026, income: 176000, expenses: [
                 { name: "Denizbank", amount: 8300 }, { name: "Akbank", amount: 5000 }, { name: "TEB", amount: 7600 },
                 { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 20000 }, { name: "QNB Kredi", amount: 14000 },
                 { name: "Birevim", amount: 38000 }, { name: "İş Bankası Kredi", amount: 29000 }, { name: "QNB", amount: 20000 },
                 { name: "Denizbank Ek Hesap", amount: 3000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
             ]},
-            { month: "Ekim", year: 2025, income: 180000, expenses: [
+            { month: "Ekim", year: 2026, income: 180000, expenses: [
                 { name: "Garanti Ek Hesap", amount: 10000 }, { name: "Garanti", amount: 8300 }, { name: "TEB", amount: 7600 },
                 { name: "Halkbank", amount: 5000 }, { name: "İş Bankası", amount: 15000 }, { name: "QNB Kredi", amount: 14000 },
                 { name: "Birevim", amount: 38000 }, { name: "İş Bankası Kredi", amount: 29000 }, { name: "QNB", amount: 15000 },
                 { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
             ]},
-            { month: "Kasım", year: 2025, income: 180000, expenses: [
+            { month: "Kasım", year: 2026, income: 180000, expenses: [
                 { name: "Garanti", amount: 8333 }, { name: "Halkbank", amount: 3000 }, { name: "İş Bankası", amount: 13000 },
                 { name: "QNB Kredi", amount: 14000 }, { name: "QNB Yeni Kredi Kartı", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
                 { name: "Birevim", amount: 45000 }, { name: "QNB Kredi Kartı", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
                 { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 15000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
             ]},
-            { month: "Aralık", year: 2025, income: 180000, expenses: [
+            { month: "Aralık", year: 2026, income: 180000, expenses: [
                 { name: "Garanti", amount: 8333 }, { name: "Halkbank", amount: 3000 }, { name: "İş Bankası", amount: 10000 },
                 { name: "QNB Yeni Kredi Kartı", amount: 8510 }, { name: "QNB Yeni Kredi", amount: 5110 }, { name: "QNB Yeni 1,99", amount: 7040 },
                 { name: "Birevim", amount: 51000 }, { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
                 { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
             ]},
-            { month: "Ocak", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi Kartı", amount: 8510 },
-                { name: "QNB Yeni Kredi", amount: 5110 }, { name: "QNB Yeni 1,99", amount: 7040 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            { month: "Şubat", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "QNB Yeni 1,99", amount: 7040 }, { name: "Birevim", amount: 80000 }, { name: "QNB", amount: 10000 },
-                { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 },
-                { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            { month: "Mart", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "Birevim", amount: 80000 }, { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            { month: "Nisan", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "Birevim", amount: 80000 }, { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            { month: "Mayıs", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            { month: "Haziran", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            { month: "Temmuz", year: 2026, income: 220000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
-            ]},
-            // 2027 AYLARI EKLENDİ
             { month: "Ocak", year: 2027, income: 200000, expenses: [
                 { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
                 { name: "QNB", amount: 10000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
@@ -298,14 +240,14 @@
         // LocalStorage'dan veriyi al veya varsayılanı kullan
         let financeData = JSON.parse(localStorage.getItem('financeData')) || defaultData;
 
-        // --- EKSİK AYLARI TAMAMLAMA (2025 Ağustos - 2030 Aralık) ---
+        // --- EKSİK AYLARI TAMAMLAMA (2026 Ağustos - 2030 Aralık) ---
         const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-        const allYears = [2025, 2026, 2027, 2028, 2029, 2030];
+        const allYears = [2026, 2027, 2028, 2029, 2030];
 
         function ensureAllMonths() {
             allYears.forEach(y => {
-                // 2025 verisi Ağustos'ta başlıyor; diğer yıllar Ocak'tan başlar
-                const startIdx = (y === 2025) ? 7 : 0;
+                // 2026 verisi Ağustos'ta başlıyor; diğer yıllar Ocak'tan başlar
+                const startIdx = (y === 2026) ? 7 : 0;
                 for (let i = startIdx; i < 12; i++) {
                     const exists = financeData.some(d => d.year === y && d.month === monthNames[i]);
                     if (!exists) {
