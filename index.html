@@ -5,18 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bütçem">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
     <title>Aile Finans Yöneticisi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
-                }
-            }
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
         }
     </script>
     <style>
@@ -28,6 +27,10 @@
         input[type=number] { -moz-appearance: textfield; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .cat-btn.selected { outline: 3px solid currentColor; outline-offset: 2px; transform: scale(1.05); }
+        #toast { transition: transform 0.35s ease, opacity 0.35s ease; transform: translateY(120%); opacity: 0; }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        .bar-anim { transition: width 0.6s ease; }
     </style>
     <base target="_blank">
 <base target="_blank">
@@ -41,30 +44,53 @@
                 <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-wallet text-emerald-400"></i> Bütçem</h1>
                 <p class="text-xs text-slate-400">Aile Finans Takibi</p>
             </div>
-            <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition">
-                <i id="darkModeIcon" class="fa-solid fa-moon text-yellow-400"></i>
-            </button>
+            <div class="flex gap-2">
+                <button onclick="openReport()" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition" title="Rapor">
+                    <i class="fa-solid fa-chart-pie text-sky-400"></i>
+                </button>
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition">
+                    <i id="darkModeIcon" class="fa-solid fa-moon text-yellow-400"></i>
+                </button>
+            </div>
         </div>
     </header>
 
     <!-- Ana İçerik -->
-    <main class="max-w-md mx-auto p-4 pb-24">
+    <main class="max-w-md mx-auto p-4 pb-32">
 
-        <!-- Ay Seçici -->
-        <div class="flex flex-col gap-2 pb-4 mb-2" id="monthTabs">
-            <!-- Aylar JS ile eklenecek -->
+        <!-- iOS Ana Ekrana Ekleme İpucu (yalnızca tarayıcıda açıldıysa, 1 kez gösterilir) -->
+        <div id="installHint" class="hidden bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl p-4 mb-4 shadow-lg fade-in">
+            <div class="flex justify-between items-start gap-3">
+                <div>
+                    <p class="font-bold text-sm mb-1"><i class="fa-solid fa-mobile-screen mr-1"></i> Ana Ekrana Ekleyin</p>
+                    <p class="text-xs text-indigo-100">Paylaş (kare ikon) → "Ana Ekrana Ekle" seçin. Böylece tam ekran açılır ve verileriniz cihazınızda güvende kalır.</p>
+                </div>
+                <button onclick="dismissInstallHint()" class="shrink-0 w-7 h-7 rounded-full bg-white/20 flex items-center justify-center"><i class="fa-solid fa-xmark text-xs"></i></button>
+            </div>
         </div>
 
+        <!-- Ay Seçici -->
+        <div class="flex flex-col gap-2 pb-4 mb-2" id="monthTabs"></div>
+
         <!-- Özet Kartı -->
-        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 mb-6 relative overflow-hidden fade-in">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 mb-4 relative overflow-hidden fade-in">
             <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-10 -mt-10"></div>
             <div class="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full -ml-10 -mb-10"></div>
 
-            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1" id="currentMonthTitle">Ağustos 2025</p>
+            <div class="flex justify-between items-start">
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium mb-1" id="currentMonthTitle">-</p>
+                <button onclick="shareMonth()" class="text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-300 px-3 py-1.5 rounded-full transition" title="Bu ayı paylaş/kopyala">
+                    <i class="fa-solid fa-share-nodes mr-1"></i>Paylaş
+                </button>
+            </div>
 
             <div class="mb-4">
                 <p class="text-xs text-slate-400 uppercase tracking-wider mb-1">Kalan Nakit Para</p>
                 <h2 class="text-4xl font-extrabold tracking-tight" id="netBalance">₺0</h2>
+                <p class="text-xs mt-2 flex items-center gap-1.5" id="cumBalanceLine">
+                    <i class="fa-solid fa-piggy-bank text-slate-400"></i>
+                    <span class="text-slate-400">Toplam Birikim: <b id="cumBalance" class="text-slate-600 dark:text-slate-300">₺0</b></span>
+                </p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -84,7 +110,6 @@
                 </div>
             </div>
 
-            <!-- Harcama Çubuğu -->
             <div class="mt-6">
                 <div class="flex justify-between text-xs mb-1">
                     <span>Harcama Oranı</span>
@@ -96,44 +121,64 @@
             </div>
         </div>
 
-        <!-- Gider Listesi -->
-        <div class="flex justify-between items-center mb-4">
+        <!-- Hızlı Bilgi Şeridi -->
+        <div class="grid grid-cols-3 gap-2 mb-6" id="quickStats"></div>
+
+        <!-- Gider Listesi Başlığı + Arama -->
+        <div class="flex justify-between items-center mb-3">
             <h3 class="font-bold text-lg">Gider Detayları</h3>
-            <span class="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-md" id="itemCount">0 Kalem</span>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleSort()" id="sortBtn" class="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1.5 rounded-md transition" title="Sıralama">
+                    <i class="fa-solid fa-arrow-down-wide-short mr-1"></i>Tutar
+                </button>
+                <span class="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-md" id="itemCount">0 Kalem</span>
+            </div>
         </div>
 
-        <div id="expensesList" class="space-y-3">
-            <!-- Giderler JS ile eklenecek -->
+        <div class="relative mb-3">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="searchInput" oninput="renderExpenses()" placeholder="Giderlerde ara..." class="w-full p-3 pl-11 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
         </div>
+
+        <div id="expensesList" class="space-y-3"></div>
 
     </main>
 
-    <!-- Alt Navigasyon (Mobil) -- Gelir/Gider butonları buraya taşındı -->
+    <!-- Alt Navigasyon -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 safe-area-bottom z-20">
-        <div class="max-w-md mx-auto grid grid-cols-4 items-center gap-2 p-3">
-            <button class="flex flex-col items-center text-emerald-500" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+        <div class="max-w-md mx-auto grid grid-cols-5 items-center gap-1 p-2">
+            <button class="flex flex-col items-center text-emerald-500 py-1" onclick="window.scrollTo({top:0, behavior:'smooth'})">
                 <i class="fa-solid fa-house text-lg mb-1"></i>
-                <span class="text-[10px] font-medium">Ana Sayfa</span>
+                <span class="text-[9px] font-medium">Ana Sayfa</span>
             </button>
-            <button onclick="openModal('income')" class="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-500/30 flex flex-col items-center justify-center gap-1 py-3 px-1 transition active:scale-95">
+            <button onclick="openModal('income')" class="bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-500/30 flex flex-col items-center justify-center gap-1 py-2.5 transition active:scale-95">
                 <i class="fa-solid fa-plus"></i>
-                <span class="text-[10px] font-semibold leading-tight text-center">Gelir Ekle/<br>Güncelle</span>
+                <span class="text-[9px] font-semibold leading-tight text-center">Gelir<br>Ekle</span>
             </button>
-            <button onclick="openModal('expense')" class="bg-rose-500 hover:bg-rose-600 text-white rounded-2xl shadow-lg shadow-rose-500/30 flex flex-col items-center justify-center gap-1 py-3 px-1 transition active:scale-95">
+            <button onclick="openModal('expense')" class="bg-rose-500 hover:bg-rose-600 text-white rounded-2xl shadow-lg shadow-rose-500/30 flex flex-col items-center justify-center gap-1 py-2.5 transition active:scale-95">
                 <i class="fa-solid fa-minus"></i>
-                <span class="text-[10px] font-semibold leading-tight text-center">Yeni Gider<br>Ekle</span>
+                <span class="text-[9px] font-semibold leading-tight text-center">Yeni<br>Gider</span>
             </button>
-            <button class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" onclick="openYearModal()">
+            <button class="flex flex-col items-center text-slate-400 py-1" onclick="openReport()">
+                <i class="fa-solid fa-chart-pie text-lg mb-1"></i>
+                <span class="text-[9px] font-medium">Rapor</span>
+            </button>
+            <button class="flex flex-col items-center text-slate-400 py-1" onclick="openYearModal()">
                 <i class="fa-solid fa-calendar-plus text-lg mb-1"></i>
-                <span class="text-[10px] font-medium">Yıl / Ay</span>
+                <span class="text-[9px] font-medium">Yıl / Ay</span>
             </button>
         </div>
     </nav>
 
-    <!-- Modal (Ekleme/Düzenleme Penceresi) -->
-    <div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center fade-in">
-        <div class="bg-white dark:bg-slate-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 sm:pb-6 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0" id="modalContent">
+    <!-- Toast Bildirimi -->
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] bg-slate-900 dark:bg-slate-700 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+        <span id="toastMsg"></span>
+        <button id="toastAction" class="hidden text-emerald-400 font-bold text-sm" onclick="toastActionFn()">Geri Al</button>
+    </div>
 
+    <!-- Gider/Gelir Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center fade-in" onclick="if(event.target===this)closeModal()">
+        <div class="bg-white dark:bg-slate-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 sm:pb-6 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0 max-h-[90vh] overflow-y-auto hide-scrollbar" id="modalContent">
             <div class="flex justify-between items-center mb-6">
                 <h3 id="modalTitle" class="text-xl font-bold">Yeni Gider</h3>
                 <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
@@ -147,21 +192,44 @@
                     <input type="text" id="inputName" placeholder="Örn: Denizbank Kredi" class="w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none transition">
                 </div>
 
+                <div id="categoryGroup">
+                    <label class="block text-sm font-medium mb-2 text-slate-600 dark:text-slate-300">Kategori</label>
+                    <div id="categoryGrid" class="grid grid-cols-5 gap-2"></div>
+                </div>
+
+                <div id="noteGroup">
+                    <label class="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-300">Not <span class="text-slate-400 font-normal">(isteğe bağlı)</span></label>
+                    <input type="text" id="inputNote" placeholder="Örn: 12. taksit, son ödeme..." class="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium mb-1 text-slate-600 dark:text-slate-300">Tutar (₺)</label>
                     <input type="number" id="inputAmount" placeholder="0" class="w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none text-lg font-bold">
                 </div>
 
                 <button onclick="saveItem()" class="w-full bg-slate-900 dark:bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-slate-800 dark:hover:bg-emerald-700 transition active:scale-95 mt-2">
-                    Kaydet
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> Kaydet
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Yıl / Ay Yönetim Penceresi -->
-    <div id="yearModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center fade-in">
-        <div class="bg-white dark:bg-slate-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 sm:pb-6 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0" id="yearModalContent">
+    <!-- Rapor Modal -->
+    <div id="reportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center fade-in" onclick="if(event.target===this)closeReport()">
+        <div class="bg-white dark:bg-slate-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0 max-h-[88vh] overflow-y-auto hide-scrollbar" id="reportModalContent">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold"><i class="fa-solid fa-chart-pie text-sky-500 mr-1"></i> Aylık Rapor</h3>
+                <button onclick="closeReport()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="reportBody"></div>
+        </div>
+    </div>
+
+    <!-- Yıl / Ay + Yedekleme Modal -->
+    <div id="yearModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-end sm:items-center justify-center fade-in" onclick="if(event.target===this)closeYearModal()">
+        <div class="bg-white dark:bg-slate-800 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 pb-8 sm:pb-6 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0 max-h-[88vh] overflow-y-auto hide-scrollbar" id="yearModalContent">
 
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold">Yıl ve Ay Yönetimi</h3>
@@ -180,7 +248,7 @@
             </div>
 
             <!-- Yeni Yıl/Ay Ekle -->
-            <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+            <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4">
                 <p class="text-sm font-semibold mb-3 flex items-center gap-2 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-calendar-plus text-blue-500"></i> Yeni Yıl / Ay Ekle</p>
                 <div class="grid grid-cols-2 gap-2 mb-3">
                     <div>
@@ -195,134 +263,163 @@
                 <button onclick="addCustomMonth()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition active:scale-95">
                     <i class="fa-solid fa-plus mr-1"></i> Dönem Ekle
                 </button>
-                <p class="text-[11px] text-slate-400 mt-2">Var olan dönemi eklerseniz o aya yönlendirilirsiniz; mevcut verileriniz hiçbir zaman silinmez.</p>
+            </div>
+
+            <!-- Yedekleme -->
+            <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+                <p class="text-sm font-semibold mb-3 flex items-center gap-2 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-shield-halved text-emerald-500"></i> Veri Güvenliği</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportData()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold py-3 rounded-xl transition active:scale-95">
+                        <i class="fa-solid fa-download mr-1"></i> Yedek Al
+                    </button>
+                    <button onclick="document.getElementById('importFile').click()" class="bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold py-3 rounded-xl transition active:scale-95">
+                        <i class="fa-solid fa-upload mr-1"></i> Geri Yükle
+                    </button>
+                </div>
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+                <p class="text-[11px] text-slate-400 mt-2">Yedek dosyanızı e‑posta/WhatsApp'a gönderip saklayın; cihaz değişiminde "Geri Yükle" ile tüm verilerinizi kurtarırsınız. Verileriniz yalnızca bu cihazda tutulur, hiçbir sunucuya gönderilmez.</p>
             </div>
 
         </div>
     </div>
 
     <script>
-        // --- VERİ YÖNETİMİ ---
+        // ================= KATEGORİLER =================
+        const CATEGORIES = {
+            kredi:      { label: 'Kredi/Banka', icon: 'fa-building-columns', color: '#3b82f6' },
+            kart:       { label: 'Kredi Kartı', icon: 'fa-credit-card',      color: '#8b5cf6' },
+            kira:       { label: 'Kira',        icon: 'fa-house-chimney',    color: '#f97316' },
+            fatura:     { label: 'Fatura',      icon: 'fa-file-invoice',     color: '#eab308' },
+            arac:       { label: 'Araç',        icon: 'fa-car',              color: '#06b6d4' },
+            market:     { label: 'Market',      icon: 'fa-cart-shopping',    color: '#22c55e' },
+            saglik:     { label: 'Sağlık',      icon: 'fa-heart-pulse',      color: '#ef4444' },
+            egitim:     { label: 'Eğitim',      icon: 'fa-graduation-cap',   color: '#ec4899' },
+            eglence:    { label: 'Eğlence',     icon: 'fa-gamepad',          color: '#6366f1' },
+            diger:      { label: 'Diğer',       icon: 'fa-receipt',          color: '#64748b' }
+        };
 
-        // Excel'den alınan başlangıç verileri + 2027 uzatması
+        function guessCategory(name) {
+            const n = (name || '').toLowerCase();
+            if (n.includes('kart')) return 'kart';
+            if (n.includes('kredi') || n.includes('bank') || n.includes('birevim') || n.includes('teb') || n.includes('qnb') || n.includes('deniz')) return 'kredi';
+            if (n.includes('kira')) return 'kira';
+            if (n.includes('araba') || n.includes('araç') || n.includes('arac')) return 'arac';
+            if (n.includes('fatura')) return 'fatura';
+            return 'diger';
+        }
+
+        // ================= VERİ =================
         const defaultData = [
             { month: "Ağustos", year: 2025, income: 180000, expenses: [
-                { name: "Denizbank", amount: 8300 }, { name: "Akbank", amount: 5000 }, { name: "TEB", amount: 7600 },
-                { name: "Halkbank", amount: 4000 }, { name: "İş Bankası", amount: 20000 }, { name: "İş Bankası Kredi", amount: 29000 },
-                { name: "QNB", amount: 20000 }, { name: "Denizbank Ek Hesap", amount: 3000 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }
+                { name: "Denizbank", amount: 8300, category: "kredi" }, { name: "Akbank", amount: 5000, category: "kredi" }, { name: "TEB", amount: 7600, category: "kredi" },
+                { name: "Halkbank", amount: 4000, category: "kredi" }, { name: "İş Bankası", amount: 20000, category: "kredi" }, { name: "İş Bankası Kredi", amount: 29000, category: "kredi" },
+                { name: "QNB", amount: 20000, category: "kredi" }, { name: "Denizbank Ek Hesap", amount: 3000, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" },
+                { name: "Araba + Fatura", amount: 20000, category: "arac" }
             ]},
             { month: "Eylül", year: 2025, income: 176000, expenses: [
-                { name: "Denizbank", amount: 8300 }, { name: "Akbank", amount: 5000 }, { name: "TEB", amount: 7600 },
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 20000 }, { name: "QNB Kredi", amount: 14000 },
-                { name: "Birevim", amount: 38000 }, { name: "İş Bankası Kredi", amount: 29000 }, { name: "QNB", amount: 20000 },
-                { name: "Denizbank Ek Hesap", amount: 3000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
+                { name: "Denizbank", amount: 8300, category: "kredi" }, { name: "Akbank", amount: 5000, category: "kredi" }, { name: "TEB", amount: 7600, category: "kredi" },
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 20000, category: "kredi" }, { name: "QNB Kredi", amount: 14000, category: "kredi" },
+                { name: "Birevim", amount: 38000, category: "kredi" }, { name: "İş Bankası Kredi", amount: 29000, category: "kredi" }, { name: "QNB", amount: 20000, category: "kredi" },
+                { name: "Denizbank Ek Hesap", amount: 3000, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }
             ]},
             { month: "Ekim", year: 2025, income: 180000, expenses: [
-                { name: "Garanti Ek Hesap", amount: 10000 }, { name: "Garanti", amount: 8300 }, { name: "TEB", amount: 7600 },
-                { name: "Halkbank", amount: 5000 }, { name: "İş Bankası", amount: 15000 }, { name: "QNB Kredi", amount: 14000 },
-                { name: "Birevim", amount: 38000 }, { name: "İş Bankası Kredi", amount: 29000 }, { name: "QNB", amount: 15000 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Garanti Ek Hesap", amount: 10000, category: "kredi" }, { name: "Garanti", amount: 8300, category: "kredi" }, { name: "TEB", amount: 7600, category: "kredi" },
+                { name: "Halkbank", amount: 5000, category: "kredi" }, { name: "İş Bankası", amount: 15000, category: "kredi" }, { name: "QNB Kredi", amount: 14000, category: "kredi" },
+                { name: "Birevim", amount: 38000, category: "kredi" }, { name: "İş Bankası Kredi", amount: 29000, category: "kredi" }, { name: "QNB", amount: 15000, category: "kredi" },
+                { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Kasım", year: 2025, income: 180000, expenses: [
-                { name: "Garanti", amount: 8333 }, { name: "Halkbank", amount: 3000 }, { name: "İş Bankası", amount: 13000 },
-                { name: "QNB Kredi", amount: 14000 }, { name: "QNB Yeni Kredi Kartı", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "Birevim", amount: 45000 }, { name: "QNB Kredi Kartı", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 15000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Garanti", amount: 8333, category: "kredi" }, { name: "Halkbank", amount: 3000, category: "kredi" }, { name: "İş Bankası", amount: 13000, category: "kredi" },
+                { name: "QNB Kredi", amount: 14000, category: "kredi" }, { name: "QNB Yeni Kredi Kartı", amount: 10000, category: "kart" }, { name: "QNB Yeni Kredi", amount: 5110, category: "kredi" },
+                { name: "Birevim", amount: 45000, category: "kredi" }, { name: "QNB Kredi Kartı", amount: 10000, category: "kart" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" },
+                { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 15000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Aralık", year: 2025, income: 180000, expenses: [
-                { name: "Garanti", amount: 8333 }, { name: "Halkbank", amount: 3000 }, { name: "İş Bankası", amount: 10000 },
-                { name: "QNB Yeni Kredi Kartı", amount: 8510 }, { name: "QNB Yeni Kredi", amount: 5110 }, { name: "QNB Yeni 1,99", amount: 7040 },
-                { name: "Birevim", amount: 51000 }, { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Garanti", amount: 8333, category: "kredi" }, { name: "Halkbank", amount: 3000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" },
+                { name: "QNB Yeni Kredi Kartı", amount: 8510, category: "kart" }, { name: "QNB Yeni Kredi", amount: 5110, category: "kredi" }, { name: "QNB Yeni 1,99", amount: 7040, category: "kredi" },
+                { name: "Birevim", amount: 51000, category: "kredi" }, { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" },
+                { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Ocak", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi Kartı", amount: 8510 },
-                { name: "QNB Yeni Kredi", amount: 5110 }, { name: "QNB Yeni 1,99", amount: 7040 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi Kartı", amount: 8510, category: "kart" },
+                { name: "QNB Yeni Kredi", amount: 5110, category: "kredi" }, { name: "QNB Yeni 1,99", amount: 7040, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" },
+                { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" },
+                { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Şubat", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "QNB Yeni 1,99", amount: 7040 }, { name: "Birevim", amount: 80000 }, { name: "QNB", amount: 10000 },
-                { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 },
-                { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 5110, category: "kredi" },
+                { name: "QNB Yeni 1,99", amount: 7040, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" }, { name: "QNB", amount: 10000, category: "kredi" },
+                { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" },
+                { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Mart", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "Birevim", amount: 80000 }, { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 5110, category: "kredi" },
+                { name: "Birevim", amount: 80000, category: "kredi" }, { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" },
+                { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Nisan", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 5110 },
-                { name: "Birevim", amount: 80000 }, { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 },
-                { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 5110, category: "kredi" },
+                { name: "Birevim", amount: 80000, category: "kredi" }, { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" },
+                { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Mayıs", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" },
+                { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" },
+                { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Haziran", year: 2026, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" },
+                { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" },
+                { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
             { month: "Temmuz", year: 2026, income: 220000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "QNB Yeni Kredi", amount: 9890 }, { name: "Kira", amount: 23000 },
-                { name: "Araba + Fatura", amount: 20000 }, { name: "Garanti Kredi Kartı", amount: 2300 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" },
+                { name: "QNB", amount: 10000, category: "kredi" }, { name: "QNB Yeni Kredi", amount: 9890, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" },
+                { name: "Araba + Fatura", amount: 20000, category: "arac" }, { name: "Garanti Kredi Kartı", amount: 2300, category: "kart" }
             ]},
-            // 2027 AYLARI EKLENDİ
             { month: "Ocak", year: 2027, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" },
+                { name: "QNB", amount: 10000, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }
             ]},
             { month: "Şubat", year: 2027, income: 200000, expenses: [
-                { name: "Halkbank", amount: 1000 }, { name: "İş Bankası", amount: 10000 }, { name: "Birevim", amount: 80000 },
-                { name: "QNB", amount: 10000 }, { name: "Kira", amount: 23000 }, { name: "Araba + Fatura", amount: 20000 }
+                { name: "Halkbank", amount: 1000, category: "kredi" }, { name: "İş Bankası", amount: 10000, category: "kredi" }, { name: "Birevim", amount: 80000, category: "kredi" },
+                { name: "QNB", amount: 10000, category: "kredi" }, { name: "Kira", amount: 23000, category: "kira" }, { name: "Araba + Fatura", amount: 20000, category: "arac" }
             ]}
         ];
 
-        // LocalStorage'dan veriyi al veya varsayılanı kullan
         let financeData = JSON.parse(localStorage.getItem('financeData')) || defaultData;
 
-        // --- EKSİK AYLARI TAMAMLAMA (2025 Ağustos - 2030 Aralık) ---
+        // Eski verilere kategori ekle (migration)
+        financeData.forEach(d => (d.expenses || []).forEach(e => {
+            if (!e.category) e.category = guessCategory(e.name);
+            if (e.note === undefined) e.note = '';
+        }));
+
         const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
         const allYears = [2025, 2026, 2027, 2028, 2029, 2030];
 
         function ensureAllMonths() {
             allYears.forEach(y => {
-                // 2025 verisi Ağustos'ta başlıyor; diğer yıllar Ocak'tan başlar
                 const startIdx = (y === 2025) ? 7 : 0;
                 for (let i = startIdx; i < 12; i++) {
                     const exists = financeData.some(d => d.year === y && d.month === monthNames[i]);
-                    if (!exists) {
-                        // Veri girilmemiş ay: boş (0 TL) başlar
-                        financeData.push({ month: monthNames[i], year: y, income: 0, expenses: [] });
-                    }
+                    if (!exists) financeData.push({ month: monthNames[i], year: y, income: 0, expenses: [] });
                 }
             });
-            // Kronolojik sırala: önce yıl, sonra ay
             financeData.sort((a, b) => a.year - b.year || monthNames.indexOf(a.month) - monthNames.indexOf(b.month));
         }
         ensureAllMonths();
 
-        // SON AÇILAN AYI HATIRLAMA
         let currentMonthIndex = parseInt(localStorage.getItem('lastViewedMonth')) || 0;
-
-        // Eğer kayıtlı index veri uzunluğundan büyükse (eski kayıt), sıfırla
-        if (currentMonthIndex >= financeData.length) {
-            currentMonthIndex = 0;
-        }
-
+        if (currentMonthIndex >= financeData.length) currentMonthIndex = 0;
         let editingIndex = null;
+        let sortByAmount = false;
+        let selectedCategory = 'diger';
+        let lastDeleted = null;
 
-        // --- FONKSİYONLAR ---
-
+        // ================= YARDIMCILAR =================
         function saveData() {
             localStorage.setItem('financeData', JSON.stringify(financeData));
-            // Son bakılan ayı kaydet
             localStorage.setItem('lastViewedMonth', currentMonthIndex);
             renderApp();
         }
@@ -331,20 +428,46 @@
             return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(amount);
         }
 
+        function totalExpenses(d) { return d.expenses.reduce((s, e) => s + e.amount, 0); }
+
+        // Toast
+        let toastTimer = null;
+        function showToast(msg, actionLabel, actionFn) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            const btn = document.getElementById('toastAction');
+            if (actionLabel && actionFn) {
+                btn.innerText = actionLabel;
+                btn.classList.remove('hidden');
+                window.toastActionFn = () => { actionFn(); hideToast(); };
+            } else {
+                btn.classList.add('hidden');
+                window.toastActionFn = null;
+            }
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(hideToast, 5000);
+        }
+        function hideToast() { document.getElementById('toast').classList.remove('show'); }
+
+        // ================= RENDER =================
         function renderApp() {
             const currentData = financeData[currentMonthIndex];
-            const totalExp = currentData.expenses.reduce((sum, item) => sum + item.amount, 0);
+            const totalExp = totalExpenses(currentData);
             const net = currentData.income - totalExp;
             const percent = currentData.income > 0 ? Math.min(Math.round((totalExp / currentData.income) * 100), 100) : 0;
 
-            // Başlıkları Güncelle
+            // Birikim: ilk aydan bugüne kadar kalanların toplamı
+            let cum = 0;
+            for (let i = 0; i <= currentMonthIndex; i++) cum += financeData[i].income - totalExpenses(financeData[i]);
+
             document.getElementById('currentMonthTitle').innerText = `${currentData.month} ${currentData.year}`;
             document.getElementById('totalIncome').innerText = formatCurrency(currentData.income);
             document.getElementById('totalExpense').innerText = formatCurrency(totalExp);
             document.getElementById('netBalance').innerText = formatCurrency(net);
             document.getElementById('expensePercent').innerText = `%${percent}`;
+            document.getElementById('cumBalance').innerText = formatCurrency(cum);
 
-            // Renkleri Ayarla
             const bar = document.getElementById('expenseBar');
             const netText = document.getElementById('netBalance');
             if (net < 0) {
@@ -356,7 +479,34 @@
             }
             bar.style.width = `${percent}%`;
 
-            // ** Değişiklik Yapılan Kısım ** Ay Sekmelerini Güncelle
+            // Hızlı bilgi şeridi
+            const biggest = currentData.expenses.length ? Math.max(...currentData.expenses.map(e => e.amount)) : 0;
+            const avg = currentData.expenses.length ? Math.round(totalExp / currentData.expenses.length) : 0;
+            document.getElementById('quickStats').innerHTML = `
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700 text-center">
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase mb-1">En Büyük</p>
+                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200">${formatCurrency(biggest)}</p>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700 text-center">
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase mb-1">Ortalama</p>
+                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200">${formatCurrency(avg)}</p>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700 text-center">
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase mb-1">Önceki Ay Kalan</p>
+                    <p class="text-sm font-bold ${prevNet(currentMonthIndex) >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${formatCurrency(prevNet(currentMonthIndex))}</p>
+                </div>`;
+
+            renderMonthTabs(currentData);
+            renderExpenses();
+        }
+
+        function prevNet(idx) {
+            if (idx <= 0) return 0;
+            const d = financeData[idx - 1];
+            return d.income - totalExpenses(d);
+        }
+
+        function renderMonthTabs(currentData) {
             const tabsContainer = document.getElementById('monthTabs');
             tabsContainer.innerHTML = '';
             const currentRow = document.createElement('div');
@@ -365,64 +515,93 @@
 
             const yearLabel = document.createElement('div');
             yearLabel.className = 'shrink-0 sticky left-0 z-10 px-3 py-2 rounded-full text-sm font-bold bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200 shadow-sm';
-            yearLabel.innerText = currentData.year; // Sadece mevcut yıl görünür
+            yearLabel.innerText = currentData.year;
             currentRow.appendChild(yearLabel);
 
-            // Sadece mevcut yılın aylarını ekleyin
             financeData.forEach((data, index) => {
-                if (data.year === currentData.year) { // Yıl kontrolü
+                if (data.year === currentData.year) {
                     const isActive = index === currentMonthIndex;
+                    const isFuture = (data.year > currentData.year) || (data.year === currentData.year && monthNames.indexOf(data.month) > monthNames.indexOf(currentData.month) && data.year === new Date().getFullYear());
                     const btn = document.createElement('button');
                     btn.className = `shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${isActive ? 'bg-slate-900 text-white dark:bg-emerald-600 shadow-md' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`;
                     btn.innerText = data.month;
-                    btn.onclick = () => { 
-                        currentMonthIndex = index; 
-                        saveData(); // Ay değişimini kaydet
-                    };
+                    btn.onclick = () => { currentMonthIndex = index; saveData(); };
                     currentRow.appendChild(btn);
                 }
             });
+        }
 
-            // Gider Listesini Oluştur
+        function renderExpenses() {
+            const currentData = financeData[currentMonthIndex];
             const list = document.getElementById('expensesList');
+            const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+
+            let items = currentData.expenses.map((e, i) => ({ ...e, origIndex: i }));
+            if (q) items = items.filter(e => (e.name + ' ' + (e.note || '')).toLowerCase().includes(q));
+            if (sortByAmount) items.sort((a, b) => b.amount - a.amount);
+
             list.innerHTML = '';
             document.getElementById('itemCount').innerText = `${currentData.expenses.length} Kalem`;
 
-            if (currentData.expenses.length === 0) {
-                list.innerHTML = '<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-receipt text-3xl mb-2"></i><p>Bu ay için gider bulunamadı.</p></div>';
+            if (items.length === 0) {
+                list.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid ${q ? 'fa-magnifying-glass' : 'fa-receipt'} text-3xl mb-2"></i><p>${q ? 'Aramanızla eşleşen gider bulunamadı.' : 'Bu ay için gider bulunamadı.'}</p></div>`;
+                return;
             }
 
-            currentData.expenses.forEach((exp, idx) => {
+            items.forEach(exp => {
+                const cat = CATEGORIES[exp.category] || CATEGORIES.diger;
                 const div = document.createElement('div');
-                div.className = "bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex justify-between items-center fade-in";
+                div.className = "bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 fade-in";
                 div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-500">
-                            <i class="fa-solid fa-credit-card"></i>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:${cat.color}1a;color:${cat.color}">
+                                <i class="fa-solid ${cat.icon}"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-semibold text-slate-800 dark:text-slate-200 truncate">${exp.name}</p>
+                                <p class="text-xs text-slate-500 truncate">${exp.note ? exp.note + ' • ' : ''}${cat.label}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="font-semibold text-slate-800 dark:text-slate-200">${exp.name}</p>
-                            <p class="text-xs text-slate-500">Gider Kalemi</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-slate-700 dark:text-slate-300">${formatCurrency(exp.amount)}</span>
-                        <div class="flex gap-1">
-                            <button onclick="editExpense(${idx})" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-blue-500 flex items-center justify-center transition">
+                        <div class="flex items-center gap-2 shrink-0 ml-2">
+                            <span class="font-bold text-slate-700 dark:text-slate-300">${formatCurrency(exp.amount)}</span>
+                            <button onclick="editExpense(${exp.origIndex})" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-blue-500 flex items-center justify-center transition">
                                 <i class="fa-solid fa-pen text-xs"></i>
                             </button>
-                            <button onclick="deleteExpense(${idx})" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-500 flex items-center justify-center transition">
+                            <button onclick="deleteExpense(${exp.origIndex})" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-500 flex items-center justify-center transition">
                                 <i class="fa-solid fa-trash text-xs"></i>
                             </button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 list.appendChild(div);
             });
         }
 
-        // --- MODAL İŞLEMLERİ ---
+        function toggleSort() {
+            sortByAmount = !sortByAmount;
+            document.getElementById('sortBtn').className = sortByAmount
+                ? "text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-1.5 rounded-md transition"
+                : "text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1.5 rounded-md transition";
+            renderExpenses();
+        }
+
+        // ================= MODAL =================
         let modalMode = 'expense';
+
+        function renderCategoryGrid() {
+            const grid = document.getElementById('categoryGrid');
+            grid.innerHTML = '';
+            Object.entries(CATEGORIES).forEach(([key, cat]) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = `cat-btn flex flex-col items-center gap-1 p-2 rounded-xl transition active:scale-95 ${selectedCategory === key ? 'selected' : ''}`;
+                b.style.color = cat.color;
+                b.style.background = cat.color + '14';
+                b.innerHTML = `<i class="fa-solid ${cat.icon} text-base"></i><span class="text-[8px] font-semibold text-slate-500 dark:text-slate-400 leading-tight text-center">${cat.label}</span>`;
+                b.onclick = () => { selectedCategory = key; renderCategoryGrid(); };
+                grid.appendChild(b);
+            });
+        }
 
         function openModal(mode, index = null) {
             modalMode = mode;
@@ -433,25 +612,37 @@
             const nameGroup = document.getElementById('inputNameGroup');
             const nameInput = document.getElementById('inputName');
             const amountInput = document.getElementById('inputAmount');
+            const noteGroup = document.getElementById('noteGroup');
+            const categoryGroup = document.getElementById('categoryGroup');
 
             modal.classList.replace('hidden', 'flex');
             setTimeout(() => content.classList.remove('translate-y-full'), 10);
 
             if (mode === 'income') {
-                title.innerText = "Geliri Güncelle";
+                title.innerText = "Aylık Geliri Güncelle";
                 nameGroup.style.display = 'none';
+                categoryGroup.style.display = 'none';
+                noteGroup.style.display = 'none';
                 amountInput.value = financeData[currentMonthIndex].income;
             } else {
                 nameGroup.style.display = 'block';
+                categoryGroup.style.display = 'block';
+                noteGroup.style.display = 'block';
                 if (index !== null) {
                     title.innerText = "Gideri Düzenle";
-                    nameInput.value = financeData[currentMonthIndex].expenses[index].name;
-                    amountInput.value = financeData[currentMonthIndex].expenses[index].amount;
+                    const exp = financeData[currentMonthIndex].expenses[index];
+                    nameInput.value = exp.name;
+                    document.getElementById('inputNote').value = exp.note || '';
+                    amountInput.value = exp.amount;
+                    selectedCategory = exp.category || 'diger';
                 } else {
                     title.innerText = "Yeni Gider Ekle";
                     nameInput.value = '';
+                    document.getElementById('inputNote').value = '';
                     amountInput.value = '';
+                    selectedCategory = localStorage.getItem('lastCategory') || 'diger';
                 }
+                renderCategoryGrid();
             }
         }
 
@@ -464,47 +655,163 @@
 
         function saveItem() {
             const amount = parseFloat(document.getElementById('inputAmount').value);
-            if (isNaN(amount) || amount < 0) {
-                alert("Lütfen geçerli bir tutar girin.");
-                return;
-            }
+            if (isNaN(amount) || amount < 0) { showToast("Lütfen geçerli bir tutar girin."); return; }
 
             if (modalMode === 'income') {
                 financeData[currentMonthIndex].income = amount;
+                showToast("Gelir güncellendi ✓");
             } else {
                 const name = document.getElementById('inputName').value.trim() || "İsimsiz Gider";
+                const note = document.getElementById('inputNote').value.trim();
+                localStorage.setItem('lastCategory', selectedCategory);
                 if (editingIndex !== null) {
-                    financeData[currentMonthIndex].expenses[editingIndex] = { name, amount };
+                    financeData[currentMonthIndex].expenses[editingIndex] = { name, amount, category: selectedCategory, note };
+                    showToast("Gider güncellendi ✓");
                 } else {
-                    financeData[currentMonthIndex].expenses.push({ name, amount });
+                    financeData[currentMonthIndex].expenses.push({ name, amount, category: selectedCategory, note });
+                    showToast("Gider eklendi ✓");
                 }
             }
-
             saveData();
             closeModal();
         }
 
-        function editExpense(index) {
-            openModal('expense', index);
-        }
+        function editExpense(index) { openModal('expense', index); }
 
         function deleteExpense(index) {
-            if (confirm("Bu gider kalemini silmek istediğinize emin misiniz?")) {
-                financeData[currentMonthIndex].expenses.splice(index, 1);
+            const exp = financeData[currentMonthIndex].expenses[index];
+            lastDeleted = { exp, index, month: currentMonthIndex };
+            financeData[currentMonthIndex].expenses.splice(index, 1);
+            saveData();
+            showToast(`"${exp.name}" silindi`, "Geri Al", () => {
+                financeData[lastDeleted.month].expenses.splice(lastDeleted.index, 0, lastDeleted.exp);
                 saveData();
-            }
+            });
         }
 
-        // --- YIL / AY YÖNETİMİ ---
+        // ================= PAYLAŞ =================
+        async function shareMonth() {
+            const d = financeData[currentMonthIndex];
+            const totalExp = totalExpenses(d);
+            let text = `📒 *${d.month} ${d.year} Bütçe Özeti*\n`;
+            text += `💵 Gelir: ${formatCurrency(d.income)}\n`;
+            text += `💸 Gider: ${formatCurrency(totalExp)}\n`;
+            text += `✅ Kalan: ${formatCurrency(d.income - totalExp)}\n\n`;
+            d.expenses.forEach(e => {
+                const cat = CATEGORIES[e.category] || CATEGORIES.diger;
+                text += `${cat.icon.includes('credit-card') ? '💳' : cat.icon.includes('house') ? '🏠' : cat.icon.includes('car') ? '🚗' : cat.icon.includes('building') ? '🏦' : '🧾'} ${e.name}: ${formatCurrency(e.amount)}\n`;
+            });
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title: 'Bütçe Özeti', text });
+                } else {
+                    await navigator.clipboard.writeText(text);
+                    showToast("Özet panoya kopyalandı ✓");
+                }
+            } catch (e) { /* iptal edildi */ }
+        }
 
-        // Modalı açarken yıl listesini ve ay seçeneklerini doldur
+        // ================= RAPOR =================
+        function openReport() {
+            const modal = document.getElementById('reportModal');
+            const content = document.getElementById('reportModalContent');
+            modal.classList.replace('hidden', 'flex');
+            setTimeout(() => content.classList.remove('translate-y-full'), 10);
+            renderReport();
+        }
+
+        function closeReport() {
+            const modal = document.getElementById('reportModal');
+            const content = document.getElementById('reportModalContent');
+            content.classList.add('translate-y-full');
+            setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
+        }
+
+        function renderReport() {
+            const d = financeData[currentMonthIndex];
+            const totalExp = totalExpenses(d);
+            const body = document.getElementById('reportBody');
+
+            // Kategori dağılımı
+            const byCat = {};
+            d.expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+            const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+
+            let catHtml = '';
+            if (catEntries.length === 0) {
+                catHtml = '<p class="text-sm text-slate-400 text-center py-3">Bu ay gider yok.</p>';
+            } else {
+                catEntries.forEach(([key, val]) => {
+                    const cat = CATEGORIES[key] || CATEGORIES.diger;
+                    const pct = totalExp > 0 ? Math.round((val / totalExp) * 100) : 0;
+                    catHtml += `
+                        <div class="mb-3">
+                            <div class="flex justify-between items-center text-xs mb-1">
+                                <span class="font-semibold flex items-center gap-1.5"><i class="fa-solid ${cat.icon}" style="color:${cat.color}"></i>${cat.label}</span>
+                                <span class="text-slate-500">${formatCurrency(val)} • %${pct}</span>
+                            </div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
+                                <div class="bar-anim h-2 rounded-full" style="width:${pct}%;background:${cat.color}"></div>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            // En büyük 5 gider
+            const top5 = [...d.expenses].sort((a, b) => b.amount - a.amount).slice(0, 5);
+            let topHtml = '';
+            top5.forEach((e, i) => {
+                topHtml += `<div class="flex justify-between items-center py-2 ${i < top5.length - 1 ? 'border-b border-slate-100 dark:border-slate-700' : ''}">
+                    <span class="text-sm"><span class="text-slate-400 font-bold mr-2">${i + 1}.</span>${e.name}</span>
+                    <span class="text-sm font-bold text-rose-500">${formatCurrency(e.amount)}</span>
+                </div>`;
+            });
+
+            // 6 aylık trend
+            const start = Math.max(0, currentMonthIndex - 5);
+            const slice = financeData.slice(start, currentMonthIndex + 1);
+            const maxVal = Math.max(...slice.map(m => Math.max(m.income, totalExpenses(m))), 1);
+            let trendHtml = '';
+            slice.forEach(m => {
+                const exp = totalExpenses(m);
+                const isCurrent = m === d;
+                trendHtml += `
+                    <div class="flex-1 flex flex-col items-center gap-1">
+                        <div class="w-full flex flex-col justify-end gap-0.5" style="height:90px">
+                            <div class="w-full rounded-t-md bg-emerald-400/80 bar-anim" style="height:${Math.round((m.income / maxVal) * 45)}px"></div>
+                            <div class="w-full rounded-t-md bg-rose-400/80 bar-anim" style="height:${Math.round((exp / maxVal) * 45)}px"></div>
+                        </div>
+                        <span class="text-[9px] font-semibold ${isCurrent ? 'text-emerald-500' : 'text-slate-400'}">${m.month.slice(0, 3)}</span>
+                        <span class="text-[9px] text-slate-500">${formatCurrency(m.income - exp)}</span>
+                    </div>`;
+            });
+
+            body.innerHTML = `
+                <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4">
+                    <p class="text-sm font-semibold mb-3 flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-500"></i> Kategori Dağılımı — ${d.month} ${d.year}</p>
+                    ${catHtml}
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4">
+                    <p class="text-sm font-semibold mb-2 flex items-center gap-2"><i class="fa-solid fa-ranking-star text-amber-500"></i> En Büyük 5 Gider</p>
+                    ${topHtml || '<p class="text-sm text-slate-400 text-center py-3">Veri yok.</p>'}
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
+                    <p class="text-sm font-semibold mb-3 flex items-center gap-2"><i class="fa-solid fa-chart-column text-emerald-500"></i> Son ${slice.length} Ay Trendi</p>
+                    <div class="flex items-end gap-2">${trendHtml}</div>
+                    <div class="flex justify-center gap-4 mt-2 text-[10px] text-slate-500">
+                        <span><i class="fa-solid fa-square text-emerald-400 mr-1"></i>Gelir</span>
+                        <span><i class="fa-solid fa-square text-rose-400 mr-1"></i>Gider</span>
+                    </div>
+                </div>`;
+        }
+
+        // ================= YIL / AY YÖNETİMİ =================
         function openYearModal() {
             const modal = document.getElementById('yearModal');
             const content = document.getElementById('yearModalContent');
             modal.classList.replace('hidden', 'flex');
             setTimeout(() => content.classList.remove('translate-y-full'), 10);
 
-            // Mevcut yılları benzersiz olarak listele
             const years = [...new Set(financeData.map(d => d.year))].sort((a, b) => a - b);
             const jumpSelect = document.getElementById('jumpYearSelect');
             jumpSelect.innerHTML = '';
@@ -515,7 +822,6 @@
                 jumpSelect.appendChild(opt);
             });
 
-            // Ay seçeneklerini doldur
             const monthSelect = document.getElementById('newMonthSelect');
             monthSelect.innerHTML = '';
             monthNames.forEach(m => {
@@ -525,7 +831,6 @@
                 monthSelect.appendChild(opt);
             });
 
-            // Yıl alanını, mevcut en büyük yıldan bir sonrasıyla öner
             const maxYear = Math.max(...years);
             const yearInput = document.getElementById('newYearInput');
             if (!yearInput.value) yearInput.placeholder = (maxYear + 1).toString();
@@ -538,7 +843,6 @@
             setTimeout(() => modal.classList.replace('flex', 'hidden'), 300);
         }
 
-        // Seçilen yılın ilk ayına git
         function jumpToYear() {
             const y = parseInt(document.getElementById('jumpYearSelect').value);
             const idx = financeData.findIndex(d => d.year === y);
@@ -550,31 +854,66 @@
             closeYearModal();
         }
 
-        // Kullanıcının girdiği yıl + ayı ekle (varsa o aya git; veri silinmez)
         function addCustomMonth() {
             const y = parseInt(document.getElementById('newYearInput').value);
             const m = document.getElementById('newMonthSelect').value;
-
-            if (isNaN(y) || y < 2000 || y > 2100) {
-                alert("Lütfen geçerli bir yıl girin (2000 - 2100 arası).");
-                return;
-            }
+            if (isNaN(y) || y < 2000 || y > 2100) { showToast("Geçerli bir yıl girin (2000-2100)."); return; }
 
             let idx = financeData.findIndex(d => d.year === y && d.month === m);
             if (idx === -1) {
-                // Yeni dönem: boş (0 TL) başlar, mevcut verilere dokunulmaz
                 financeData.push({ month: m, year: y, income: 0, expenses: [] });
                 financeData.sort((a, b) => a.year - b.year || monthNames.indexOf(a.month) - monthNames.indexOf(b.month));
                 idx = financeData.findIndex(d => d.year === y && d.month === m);
             }
-
             currentMonthIndex = idx;
             saveData();
             window.scrollTo({ top: 0, behavior: 'smooth' });
             closeYearModal();
         }
 
-        // --- TEMA AYARLARI ---
+        // ================= YEDEKLEME =================
+        function exportData() {
+            const blob = new Blob([JSON.stringify(financeData, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            const now = new Date();
+            a.href = URL.createObjectURL(blob);
+            a.download = `butce-yedek-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            showToast("Yedek dosyası indirildi ✓");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!Array.isArray(data) || !data.every(d => d.month && d.year)) throw new Error();
+                    if (!confirm("Mevcut verileriniz yedek dosyasındaki verilerle DEĞİŞTİRİLECEK. Emin misiniz?")) return;
+                    financeData = data;
+                    financeData.forEach(d => (d.expenses || []).forEach(x => {
+                        if (!x.category) x.category = guessCategory(x.name);
+                        if (x.note === undefined) x.note = '';
+                        if (d.income === undefined) d.income = 0;
+                        if (!Array.isArray(d.expenses)) d.expenses = [];
+                    }));
+                    ensureAllMonths();
+                    currentMonthIndex = 0;
+                    saveData();
+                    showToast("Veriler geri yüklendi ✓");
+                    closeYearModal();
+                } catch (err) {
+                    showToast("Geçersiz yedek dosyası!");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // ================= TEMA =================
         function toggleDarkMode() {
             const html = document.documentElement;
             const icon = document.getElementById('darkModeIcon');
@@ -589,13 +928,30 @@
             }
         }
 
-        // Tema Yükleme
         if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
             document.getElementById('darkModeIcon').className = "fa-solid fa-sun text-orange-400";
         }
 
-        // Uygulamayı Başlat (Son bakılan ayda açılacak)
+        // ================= KALICI DURUM & iOS =================
+        // Sayfa her açılışta son bakılan ayda açılır (saveData'da kaydedilir)
+        window.addEventListener('beforeunload', () => {
+            localStorage.setItem('lastViewedMonth', currentMonthIndex);
+        });
+
+        // iOS ana ekrana ekleme ipucu: yalnızca tarayıcıda açıldıysa 1 kez göster
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+        if (isIOS && !isStandalone && !localStorage.getItem('installHintDismissed')) {
+            document.getElementById('installHint').classList.remove('hidden');
+        }
+
+        function dismissInstallHint() {
+            localStorage.setItem('installHintDismissed', '1');
+            document.getElementById('installHint').classList.add('hidden');
+        }
+
+        // Başlat
         renderApp();
     </script>
 </body>
